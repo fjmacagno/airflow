@@ -30,7 +30,7 @@ from tempfile import NamedTemporaryFile
 from typing import Any, Callable, Dict, Optional, Tuple, TypeVar, Union, cast
 from urllib.parse import urlparse
 
-from boto3.s3.transfer import S3Transfer
+from boto3.s3.transfer import S3Transfer, TransferConfig
 from botocore.exceptions import ClientError
 
 from airflow.exceptions import AirflowException
@@ -651,7 +651,7 @@ class S3Hook(AwsBaseHook):
             extra_args['ACL'] = acl_policy
 
         client = self.get_conn()
-        client.upload_fileobj(file_obj, bucket_name, key, ExtraArgs=extra_args)
+        client.upload_fileobj(file_obj, bucket_name, key, ExtraArgs=extra_args, Config=TransferConfig(use_threads=False))
 
     def copy_object(
         self,
