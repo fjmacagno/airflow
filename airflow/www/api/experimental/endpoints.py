@@ -45,7 +45,7 @@ def requires_authentication(function: T):
 
     @wraps(function)
     def decorated(*args, **kwargs):
-        return current_app.api_auth.requires_authentication(function)(*args, **kwargs)
+        return function(*args, **kwargs)
 
     return cast(T, decorated)
 
