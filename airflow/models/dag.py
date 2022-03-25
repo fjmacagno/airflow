@@ -2832,6 +2832,12 @@ class DagModel(Base):
             return path
 
     @provide_session
+    def can_run_in_current_env(self, session=NEW_SESSION) -> bool:
+        tags: List[DagTag] = self.get_dagmodel(self.dag_id, session).tags
+        environment = conf.get('core', 'environment', fallback=None)
+        return not environment or environment in map(lambda t: t.name, tags)
+
+    @provide_session
     def set_is_paused(self, is_paused: bool, including_subdags: bool = True, session=NEW_SESSION) -> None:
         """
         Pause/Un-pause a DAG.
@@ -2840,6 +2846,10 @@ class DagModel(Base):
         :param including_subdags: whether to include the DAG's subdags
         :param session: session
         """
+        if not is_paused and not self.can_run_in_current_env(session):
+            log.warning(f"Can't unpause DAG {self.dag_id} since it doesn't have a tag matching the current environment")
+            return
+
         filter_query = [
             DagModel.dag_id == self.dag_id,
         ]

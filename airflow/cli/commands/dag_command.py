@@ -174,8 +174,10 @@ def set_is_paused(is_paused, args):
     if not dag:
         raise SystemExit(f"DAG: {args.dag_id} does not exist in 'dag' table")
 
-    dag.set_is_paused(is_paused=is_paused)
+    if not dag.can_run_in_current_env():
+        raise SystemExit(f"DAG: {args.dag_id} couldn't be unpaused, it is not compatible with this environment")
 
+    dag.set_is_paused(is_paused=is_paused)
     print(f"Dag: {args.dag_id}, paused: {is_paused}")
 
 

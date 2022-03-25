@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-from typing import Collection, Optional
+from typing import Collection, Optional, List
 
 from connexion import NoContent
 from flask import current_app, g, request
@@ -113,6 +113,8 @@ def patch_dag(*, dag_id: str, update_mask: UpdateMask = None, session: Session =
     dag = session.query(DagModel).filter(DagModel.dag_id == dag_id).one_or_none()
     if not dag:
         raise NotFound(f"Dag with id: '{dag_id}' not found")
+    if not patch_body['is_paused'] and not dag.can_run_in_current_env():
+        raise BadRequest(detail="DAG cannot be unpaused because it is not compatible with the current environment")
     dag.is_paused = patch_body['is_paused']
     session.flush()
     return dag_schema.dump(dag)
@@ -154,7 +156,10 @@ def patch_dags(limit, session, offset=0, only_active=True, tags=None, dag_id_pat
     dags = dags_query.order_by(DagModel.dag_id).offset(offset).limit(limit).all()
 
     dags_to_update = {dag.dag_id for dag in dags}
-    session.query(DagModel).filter(DagModel.dag_id.in_(dags_to_update)).update(
+    dag_models: List[DagModel] = session.query(DagModel).filter(DagModel.dag_id.in_(dags_to_update))
+    if not patch_body['is_paused'] and any(not dag.can_run_in_current_env() for dag in dag_models):
+        raise BadRequest(detail="DAG cannot be unpaused because it is not compatible with the current environment")
+    dags.update(
         {DagModel.is_paused: patch_body['is_paused']}, synchronize_session='fetch'
     )
 

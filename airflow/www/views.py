@@ -3130,7 +3130,12 @@ class Airflow(AirflowBaseView):
         """Toggle paused."""
         dag_id = request.args.get('dag_id')
         is_paused = request.args.get('is_paused') == 'false'
-        models.DagModel.get_dagmodel(dag_id).set_is_paused(is_paused=is_paused)
+
+        dag_model = models.DagModel.get_dagmodel(dag_id)
+        if not is_paused and not dag_model.can_run_in_current_env():
+            abort(Response('DAG cannot be unpaused because it is not compatible with the current environment', 400))
+
+        dag_model.set_is_paused(is_paused=is_paused)
         return "OK"
 
     @expose('/gantt')
